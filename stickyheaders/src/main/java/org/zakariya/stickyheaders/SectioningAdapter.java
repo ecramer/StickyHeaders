@@ -28,7 +28,7 @@ import java.util.List;
  * be ignored by SectioningAdapter subclasses - but it is made externally accessible just in case.
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.ViewHolder> {
+public abstract class SectioningAdapter<IVH extends SectioningAdapter.ItemViewHolder, HVH extends SectioningAdapter.HeaderViewHolder> extends RecyclerView.Adapter<SectioningAdapter.ViewHolder> {
 
 	private static final String TAG = "SectioningAdapter";
 
@@ -118,7 +118,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 			return positionInSection;
 		}
 
-		private void setPositionInSection(int positionInSection) {
+		protected void setPositionInSection(int positionInSection) {
 			this.positionInSection = positionInSection;
 		}
 	}
@@ -163,25 +163,19 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 	/**
 	 * @return Number of sections
 	 */
-	public int getNumberOfSections() {
-		return 0;
-	}
+	public abstract int getNumberOfSections();
 
 	/**
 	 * @param sectionIndex index of the section in question
 	 * @return the number of items in the specified section
 	 */
-	public int getNumberOfItemsInSection(int sectionIndex) {
-		return 0;
-	}
+	public abstract int getNumberOfItemsInSection(int sectionIndex);
 
 	/**
 	 * @param sectionIndex index of the section in question
 	 * @return true if this section has a header
 	 */
-	public boolean doesSectionHaveHeader(int sectionIndex) {
-		return false;
-	}
+	public abstract boolean doesSectionHaveHeader(int sectionIndex);
 
 	/**
 	 * For scenarios with multiple types of headers, override this to return an integer in range [0,255] specifying a custom type for this header.
@@ -233,9 +227,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 	 * @param itemUserType If getSectionItemUserType is overridden to vend custom types, this will be the specified type
 	 * @return A new ItemViewHolder holding an item view
 	 */
-	public ItemViewHolder onCreateItemViewHolder(ViewGroup parent, int itemUserType) {
-		return null;
-	}
+	public abstract IVH onCreateItemViewHolder(ViewGroup parent, int itemUserType);
 
 	/**
 	 * Called when a ViewHolder is needed for a section header view
@@ -244,9 +236,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 	 * @param headerUserType If getSectionHeaderUserType is overridden to vend custom types, this will be the specified type
 	 * @return A new HeaderViewHolder holding a header view
 	 */
-	public HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent, int headerUserType) {
-		return null;
-	}
+	public abstract HVH onCreateHeaderViewHolder(ViewGroup parent, int headerUserType);
 
 	/**
 	 * Called when a ViewHolder is needed for a section footer view
@@ -280,8 +270,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 	 * @param itemIndex    the index of the item in the section where 0 is the first item
 	 * @param itemUserType if getSectionItemUserType is overridden to provide custom item types, this will be the type for this item
 	 */
-	public void onBindItemViewHolder(ItemViewHolder viewHolder, int sectionIndex, int itemIndex, int itemUserType) {
-	}
+	public abstract void onBindItemViewHolder(IVH viewHolder, int sectionIndex, int itemIndex, int itemUserType);
 
 	/**
 	 * Called to display header data for a particular section
@@ -290,8 +279,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 	 * @param sectionIndex   the index of the section containing the header to update
 	 * @param headerUserType if getSectionHeaderUserType is overridden to provide custom header types, this will be the type for this header
 	 */
-	public void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int sectionIndex, int headerUserType) {
-	}
+	public abstract void onBindHeaderViewHolder(HVH viewHolder, int sectionIndex, int headerUserType);
 
 	/**
 	 * Called to update the ghost header for a particular section. Note, most implementations will not need to ever touch the ghost header.
@@ -622,7 +610,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 
 		// walk the section indices backwards
 		List<Integer> sectionIndices = new ArrayList<>(selectionStateBySection.keySet());
-		java.util.Collections.sort(sectionIndices, Collections.<Integer>reverseOrder());
+		Collections.sort(sectionIndices, Collections.<Integer>reverseOrder());
 
 		for (int sectionIndex : sectionIndices) {
 			SectionSelectionState state = selectionStateBySection.get(sectionIndex);
@@ -1312,6 +1300,7 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 		throw new IndexOutOfBoundsException("unrecognized viewType: " + viewType + " does not correspond to TYPE_ITEM, TYPE_HEADER or TYPE_FOOTER");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void onBindViewHolder(ViewHolder holder, int adapterPosition) {
 		int section = getSectionForAdapterPosition(adapterPosition);
@@ -1327,11 +1316,11 @@ public class SectioningAdapter extends RecyclerView.Adapter<SectioningAdapter.Vi
 		int userType = unmaskUserViewType(holder.getItemViewType());
 		switch (baseType) {
 			case TYPE_HEADER:
-				onBindHeaderViewHolder((HeaderViewHolder) holder, section, userType);
+				onBindHeaderViewHolder((HVH) holder, section, userType);
 				break;
 
 			case TYPE_ITEM:
-				ItemViewHolder ivh = (ItemViewHolder) holder;
+				IVH ivh = (IVH) holder;
 				int positionInSection = getPositionOfItemInSection(section, adapterPosition);
 				ivh.setPositionInSection(positionInSection);
 				onBindItemViewHolder(ivh, section, positionInSection, userType);
